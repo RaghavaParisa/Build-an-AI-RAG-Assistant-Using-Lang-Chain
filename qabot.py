@@ -45,19 +45,12 @@ def document_loader(file):
 
 def text_splitter(data):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
+        chunk_size=1000,
         chunk_overlap=50,
         length_function=len,
     )
     chunks = text_splitter.split_documents(data)
-        
-    for i, chunk in enumerate(chunks[:5]):
-        print(f"Chunk {i+1}: {chunk.page_content[:100]}...")
-
-    #  Filter out empty chunks
-    filtered_chunks = [chunk for chunk in chunks if chunk.page_content.strip()]
-
-    return filtered_chunks
+    return chunks
 
 
 def watsonx_embedding():
@@ -72,54 +65,23 @@ def watsonx_embedding():
         project_id="skills-network",
         params=embed_params,
     )
-    # embed_params = {
-    #     "truncate": True,
-    #     "normalize_embeddings": True
-    # }
-
-    # watsonx_embedding = WatsonxEmbeddings(
-    #     model_id="ibm/slate-embedding-model",
-    #     url="https://us-south.ml.cloud.ibm.com",
-    #     project_id="skills-network",
-    #     params=embed_params,
-    # )
     return watsonx_embedding
 
 
 def vector_database(chunks):
     embedding_model = watsonx_embedding()
-    texts = [chunk.page_content for chunk in chunks]
-
-    # Manually embed each chunk
-    embeddings = [embedding_model.embed_query(text) for text in texts]
-
-    # Filter out None embeddings
-    valid_pairs = [(text, emb) for text, emb in zip(texts, embeddings) if emb is not None]
-
-    if not valid_pairs:
-        raise ValueError("No valid embeddings generated. Check input text or embedding model.")
-
-    valid_texts, valid_embeddings = zip(*valid_pairs)
-
-    vectordb = Chroma.from_texts(
-        texts=list(valid_texts),
-        embedding=embedding_model
-    )
+    vectordb = Chroma.from_documents(chunks, embedding_model)
     return vectordb
 
 def retriever(file):
     # Step 1: Load the document
     splits = document_loader(file)
-    
     # Step 2: Split the document into chunks
     chunks = text_splitter(splits)
-    
     # Step 3: Create a vector database from the chunks
     vectordb = vector_database(chunks)
-    
     # Step 4: Convert the vector store into a retriever
     retriever = vectordb.as_retriever()
-    
     return retriever
 
 def retriever_qa(file, query):
@@ -130,7 +92,7 @@ def retriever_qa(file, query):
         llm=llm,
         chain_type="stuff",  # You can also try "map_reduce" or "refine" for longer documents
         retriever=retriever_obj,
-        return_source_documents=True
+        return_source_documents=False
     )
     
     response = qa.invoke({"query": query})

@@ -24,4 +24,4 @@
 ###### Gradio UI: Users interact via a simple web interface.
 
 ## Install the required packages using below command
-pip install -r requirements.txt
+**pip install -r requirements.txt**

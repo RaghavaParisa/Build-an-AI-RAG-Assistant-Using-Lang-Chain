@@ -22,3 +22,6 @@
 ###### Vector Store: ChromaDB stores the embeddings.
 ###### RetrievalQA: LangChain retrieves relevant chunks and queries the LLM.
 ###### Gradio UI: Users interact via a simple web interface.
+
+## Install the required packages using below command
+pip install -r requirements.txt
